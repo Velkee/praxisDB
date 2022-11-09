@@ -1,3 +1,7 @@
 <svelte:head>
-	<title>praxisDB: Database</title>
+	<title>praxisDB</title>
 </svelte:head>
+
+<header>
+	<h1>praxisDB: Database</h1>
+</header>
