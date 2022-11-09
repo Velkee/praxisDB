@@ -14,7 +14,13 @@ const cn = {
 	password: process.env.POSTGRES_PASSWORD,
 };
 
-const db = pgp(cn);
+const db = pgp({
+	host: '172.22.0.2',
+	port: 5432,
+	database: 'postgres',
+	user: 'postgres',
+	password: process.env.POSTGRES_PASSWORD,
+});
 
 db.any('SELECT * FROM subject')
 	.then(function (data: any) {
