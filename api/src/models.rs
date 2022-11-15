@@ -9,11 +9,13 @@ pub struct Company {
     pub subject: i32,
 }
 
+#[derive(Queryable)]
 pub struct Subject {
     pub id: i32,
     pub name: String,
 }
 
+#[derive(Queryable)]
 pub struct Checked {
     pub id: i32,
     pub company: i32,
