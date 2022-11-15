@@ -8,10 +8,10 @@ fn main() {
     let connection = &mut establish_connection();
     let results = companies
         .load::<Company>(connection)
-        .expect("Error loading posts");
+        .expect("Error loading companies");
 
     for company in results {
         println!("{}", company.id);
-        println!("{}", company.name)
+        println!("{}", company.name);
     }
 }
