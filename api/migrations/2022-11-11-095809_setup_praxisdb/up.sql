@@ -9,7 +9,7 @@ CREATE TABLE companies (
     subject int NOT NULL REFERENCES subjects ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE checked (
+CREATE TABLE checks (
     id SERIAL PRIMARY KEY,
     company int NOT NULL REFERENCES companies ON DELETE CASCADE ON UPDATE CASCADE,
     date date NOT NULL,

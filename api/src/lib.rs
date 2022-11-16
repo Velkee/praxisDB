@@ -26,3 +26,16 @@ pub fn create_company(conn: &mut PgConnection, id: &i32, name: &str, subject: &i
         .get_result(conn)
         .expect("Error saving new company")
 }
+
+use self::models::{Subject, NewSubject};
+
+pub fn create_subject(conn: &mut PgConnection, name: &str) -> Subject {
+    use crate::schema::subjects;
+
+    let new_subject = NewSubject { name };
+
+    diesel::insert_into(subjects::table)
+        .values(&new_subject)
+        .get_result(conn)
+        .expect("Error saving new subject")
+}

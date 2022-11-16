@@ -1,7 +1,7 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    checked (id) {
+    checks (id) {
         id -> Int4,
         company -> Int4,
         date -> Date,
@@ -25,11 +25,11 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(checked -> companies (company));
+diesel::joinable!(checks -> companies (company));
 diesel::joinable!(companies -> subjects (subject));
 
 diesel::allow_tables_to_appear_in_same_query!(
-    checked,
+    checks,
     companies,
     subjects,
 );

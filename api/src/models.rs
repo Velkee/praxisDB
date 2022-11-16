@@ -1,4 +1,4 @@
-use crate::schema::companies;
+use crate::schema::*;
 use diesel::prelude::*;
 use diesel::sql_types::Date;
 
@@ -16,7 +16,7 @@ pub struct Subject {
 }
 
 #[derive(Queryable)]
-pub struct Checked {
+pub struct Check {
     pub id: i32,
     pub company: i32,
     pub date: Date,
@@ -30,4 +30,10 @@ pub struct NewCompany<'a> {
     pub id: &'a i32,
     pub name: &'a str,
     pub subject: &'a i32,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = subjects)]
+pub struct NewSubject<'a> {
+    pub name: &'a str,
 }

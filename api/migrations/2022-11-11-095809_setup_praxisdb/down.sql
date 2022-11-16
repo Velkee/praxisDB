@@ -1,3 +1,3 @@
-DROP TABLE checked;
+DROP TABLE checks;
 DROP TABLE companies;
 DROP TABLE subjects;
