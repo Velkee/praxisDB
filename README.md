@@ -38,7 +38,6 @@
   <p align="center">
     A project to help keep track of Norwegian workplaces accepting praxis students for YFF 
     <br />
-    <a href="https://github.com/Velkee/praxisDB"><strong>Explore the docs »</strong></a>
     <br />
     <br />
     ·
