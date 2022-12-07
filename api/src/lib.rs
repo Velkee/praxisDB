@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use dotenvy::dotenv;
@@ -38,4 +39,17 @@ pub fn create_subject(conn: &mut PgConnection, name: &str) -> Subject {
         .values(&new_subject)
         .get_result(conn)
         .expect("Error saving new subject")
+}
+
+use self::models::{Check, NewCheck};
+
+pub fn create_check(conn: &mut PgConnection, company: &i32, date: &NaiveDate, answer: &bool, response: &bool) -> Check {
+    use crate::schema::checks;
+
+    let new_check = NewCheck { company, date, answer, response };
+
+    diesel::insert_into(checks::table)
+        .values(&new_check)
+        .get_result(conn)
+        .expect("Error saving new check")
 }

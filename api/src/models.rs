@@ -1,6 +1,7 @@
 use crate::schema::*;
+use chrono::NaiveDate;
 use diesel::prelude::*;
-use diesel::sql_types::Date;
+
 
 #[derive(Queryable)]
 pub struct Company {
@@ -19,7 +20,7 @@ pub struct Subject {
 pub struct Check {
     pub id: i32,
     pub company: i32,
-    pub date: Date,
+    pub date: NaiveDate,
     pub answer: bool,
     pub response: bool,
 }
@@ -36,4 +37,13 @@ pub struct NewCompany<'a> {
 #[diesel(table_name = subjects)]
 pub struct NewSubject<'a> {
     pub name: &'a str,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = checks)]
+pub struct NewCheck<'a> {
+    pub company: &'a i32,
+    pub date: &'a NaiveDate,
+    pub answer: &'a bool,
+    pub response: &'a bool,
 }
