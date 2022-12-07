@@ -1,4 +1,4 @@
-use rust_api::*;
+use praxisdb_api::*;
 use std::io::stdin;
 
 fn main() {

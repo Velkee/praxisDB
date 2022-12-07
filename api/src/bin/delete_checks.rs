@@ -1,5 +1,5 @@
 use diesel::prelude::*;
-use rust_api::*;
+use praxisdb_api::*;
 use std::env::args;
 
 fn main() {

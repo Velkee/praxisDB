@@ -1,6 +1,6 @@
 use self::models::*;
 use diesel::prelude::*;
-use rust_api::*;
+use praxisdb_api::*;
 
 fn main() {
     use self::schema::checks::dsl::*;
