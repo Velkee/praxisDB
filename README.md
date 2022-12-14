@@ -60,5 +60,3 @@
 [issues-url]: https://github.com/Velkee/praxisDB/issues
 [license-shield]: https://img.shields.io/github/license/Velkee/praxisDB.svg?style=for-the-badge
 [license-url]: https://github.com/Velkee/praxisDB/blob/master/LICENSE.txt
-[svelte.dev]: https://img.shields.io/badge/Svelte-4A4A55?style=for-the-badge&logo=svelte&logoColor=FF3E00
-[svelte-url]: https://svelte.dev/
