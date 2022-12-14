@@ -3,7 +3,7 @@
 </header>
 
 <main class="main-content">
-    <form action="https://localhost:8080/send" method="post">
+    <form action="https://localhost:8000/send" method="post">
         <label for="buissenessName">Buisseness name (case insensitive):</label>
         <br />
         <input type="text" name="buissenessName" id="buissenessName">
