@@ -3,7 +3,26 @@
 </header>
 
 <main class="main-content">
-    <form action="/send" method="post">
-        <button>Submit</button>
+    <form action="https://localhost:8080/send" method="post">
+        <label for="buissenessName">Buisseness name (case insensitive):</label>
+        <br />
+        <input type="text" name="buissenessName" id="buissenessName">
+        <br />
+
+        <label for="buissenessNr">Buisseness' organisation number (check <a href="https://www.brreg.no">brreg.no</a>):</label>
+        <br />
+        <input type="number" name="buissenessNr" id="buissenessNr">
+        <br />
+
+        <label for="subject">Which education programme are you taking?</label>
+        <br />
+        <input type="text" name="subject" id="subject">
+        <br />
+
+        <label for="imageUpload">Please upload an image so we can verify the request:</label>
+        <br />
+        <input type="file" name="imageUpload" id="imageUpload" accept=".png,.jpg,gif">
+        <br />
+        <button type="submit">Submit</button>
     </form>
 </main>

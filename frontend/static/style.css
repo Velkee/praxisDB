@@ -34,8 +34,18 @@ a {
 	color: #b1e575;
 }
 
+form {
+	padding: 1em;
+	border: 0.25em solid #b1b1b1;
+	border-radius: 1em;
+}
+
+form input {
+	margin: 1em;
+}
+
 .main-content {
-	max-width: 75%;
+	max-width: 50%;
 	margin: auto;
 }
 
