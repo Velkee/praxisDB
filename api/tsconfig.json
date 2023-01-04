@@ -1,4 +1,9 @@
 {
-    "extends": "@tsconfig/node16/tsconfig.json",
-    "compilerOptions": {"sourceRoot": "src", "sourceMap": true, "outDir": "dist", "module": "esnext"}
+	"extends": "@tsconfig/node16/tsconfig.json",
+	"compilerOptions": {
+		"sourceRoot": "src",
+		"sourceMap": true,
+		"outDir": "dist",
+		"module": "esnext"
+	}
 }
