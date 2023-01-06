@@ -2,8 +2,15 @@
     <h1>praxisDB: Submit</h1>
 </header>
 
+<script>
+    // @ts-ignore
+    import { PUBLIC_API_IP, PUBLIC_API_PORT } from '$env/static/public'
+    const api_ip = PUBLIC_API_IP;
+    const api_port = PUBLIC_API_PORT;
+</script>
+
 <main class="main-content">
-    <form action="http://localhost:23450/send" method="post" enctype="multipart/form-data">
+    <form action='http://{api_ip}:{api_port}/send' method="post" enctype="multipart/form-data">
         <label for="buissenessName">Buisseness name (case insensitive):</label>
         <br />
         <input type="text" name="buissenessName" id="buissenessName" required>
