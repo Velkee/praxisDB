@@ -30,6 +30,7 @@
         <br />
         <input type="file" name="imageUpload" id="imageUpload" accept=".jpg,.png" required>
         <br />
+        
         <button type="submit">Submit</button>
     </form>
 </main>
