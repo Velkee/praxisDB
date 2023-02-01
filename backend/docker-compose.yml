@@ -6,9 +6,11 @@ services:
             - .env
         volumes:
             - ./pgdata:/var/lib/postgresql/data
+        ports:
+            - 5432:5432
 
     adminer:
         image: adminer
         restart: always
         ports:
-            - 5432:8080
+            - 8181:8080
