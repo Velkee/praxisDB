@@ -10,7 +10,7 @@
 </script>
 
 <main class="main-content">
-	<form action='http://{api_ip}:{api_port}/send' method="post" enctype="multipart/form-data">
+	<form action='http://{api_ip}:{api_port}/submit' method="post" enctype="multipart/form-data">
         <label for="buissenessName">Buisseness name (case insensitive):</label>
         <br />
         <input type="text" name="buissenessName" id="buissenessName" required>
