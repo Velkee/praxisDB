@@ -50,10 +50,6 @@
 
 <br />
 
----
-
-<br />
-
 <div align="center">
   <h2>How to use</h2>
   <h3>Dependencies:</h3>
