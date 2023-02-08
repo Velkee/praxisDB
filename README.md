@@ -33,10 +33,11 @@
   </a>
 -->
 
-<h3 align="center">praxisDB</h3>
+<div align="center">
+  <h3>praxisDB</h3>
 
-  <p align="center">
-    A project to help keep track of Norwegian workplaces accepting praxis students for YFF 
+  <p>
+    A project to help keep track of Norwegian workplaces accepting praxis students for YFF
     <br />
     <br />
     <br />
@@ -45,6 +46,82 @@
     ·
     <a href="https://github.com/Velkee/praxisDB/issues">Request Feature</a>
   </p>
+</div>
+
+<br />
+
+---
+
+<br />
+
+<div align="center">
+  <h2>How to use</h2>
+  <h3>Dependencies:</h3>
+  <p>
+    <a href="https://nodejs.org/">Node.js</a>,
+    <a href="https://docker.com/">Docker</a>
+  </p>
+
+  <br />
+
+  <p>
+  To start, clone the repository using <code>git</code> or download the repository by pressing the "Code" button and selecting "Download ZIP"
+  </p>
+
+  <p>
+  Remember to set the environment variables using the <code>.env</code> files! An example file is available in each folder
+  </p>
+
+  <br />
+
+  <h3>Starting the backend:</h3>
+  <p>
+    · Open a terminal window and navigate to <code>[...]/praxisDB/backend</code>
+  </p>
+  <p>
+    · Start the backend using Docker with <code>docker compose up -d</code>
+  </p>
+  <p>
+    · If this doesn't work, double check that you have Docker installed and that it's in your path
+  </p>
+
+  <br />
+
+  <h3>Starting the API:</h3>
+
+  <p>
+    · Open a terminal window and navigate to <code>[...]/praxisDB/api</code>
+  </p>
+  <p>
+    · Start the API using Node.js with <code>npm run start</code>
+  </p>
+  <p>
+    · The API will stop running if the terminal is closed or process is aborted
+  </p>
+  <p>
+    · If this doesn't work, double check that you have Node.js installed and that it's in your path
+  </p>
+
+  <br />
+
+  <h3>Starting the frontend:</h3>
+
+  <p>
+    · Open a terminal window and navigate to <code>[...]/praxisDB/frontend</code>
+  </p>
+  <p>
+    · Build the frontend with <code>npm run build</code>
+  </p>
+  <p>
+    · Run a preview of the frontend with <code>npm run preview</code>. Default port is <code>4173</code>
+  </p>
+  <p>
+    · The frontend will stop running if the terminal is closed or process is aborted
+  </p>
+  <p>
+    · If this doesn't work, double check that you have Node.js installed and that it's in your path
+  </p>
+
 </div>
 
 <!-- MARKDOWN LINKS & IMAGES -->
