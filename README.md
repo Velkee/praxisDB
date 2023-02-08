@@ -79,6 +79,9 @@
     · Open a terminal window and navigate to <code>[...]/praxisDB/backend</code>
   </p>
   <p>
+    · Build the image for the backend using <code>docker compose build</code>
+  </p>
+  <p>
     · Start the backend using Docker with <code>docker compose up -d</code>
   </p>
   <p>

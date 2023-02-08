@@ -1,16 +1,16 @@
 services:
-    db:
-        image: postgres
-        restart: always
-        env_file:
-            - .env
-        volumes:
-            - ./pgdata:/var/lib/postgresql/data
-        ports:
-            - 5432:5432
+  db:
+    image: praxisdb-backend
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
 
-    adminer:
-        image: adminer
-        restart: always
-        ports:
-            - 8181:8080
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8181:8080
