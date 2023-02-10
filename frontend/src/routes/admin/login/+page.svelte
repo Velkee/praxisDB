@@ -10,8 +10,7 @@
 </script>
 
 <main class="main-content">
-    <form action='{api_ip}:{api_port}/login' method="post">
-        <h2>Register a new admin</h2>
+    <form action='http://{api_ip}:{api_port}/admin/login' method="post">
         <label for="adminUsername">Username:</label>
         <br />
         <input type="text" name="adminUsername" id="adminUsername" required>
