@@ -26,6 +26,16 @@
         <input type="text" name="subject" id="subject" required>
         <br />
 
+        <label for="responded">Did you recieve a response?</label>
+        <br />
+        <input type="checkbox" name="responded" id="responded">
+        <br />
+
+        <label for="accepted">Was your application accepted?</label>
+        <br />
+        <input type="checkbox" name="accepted" id="accepted">
+        <br />
+
         <label for="imageUpload">Please upload an image so we can verify the request:</label>
         <br />
         <input type="file" name="imageUpload" id="imageUpload" accept=".jpg,.png" required>

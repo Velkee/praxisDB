@@ -5,5 +5,8 @@
 		"sourceMap": true,
 		"outDir": "dist",
 		"module": "esnext"
+	},
+	"ts-node": {
+		"esm": true
 	}
 }

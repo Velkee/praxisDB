@@ -28,54 +28,123 @@ async function validateCookie(key: string): Promise<number | undefined> {
 }
 
 // Sets up multer's storage location
+
+let uniqueSuffix: string;
+
 const storage = multer.diskStorage({
 	destination: (_req, _file, cb) => {
 		cb(null, './tmp/uploads');
 	},
 	filename: (_req, file, cb) => {
-		const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+		uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
 		cb(null, file.fieldname + '-' + uniqueSuffix);
 	},
 });
 const upload = multer({ storage: storage });
 
-app.post('/submit', upload.single('imageUpload'), (req, res) => {
+app.post('/submit', upload.single('imageUpload'), async (req, res) => {
+	const submission: {
+		buissenessName: string;
+		buissenessNr: number;
+		subject: string;
+		responded?: boolean;
+		accepted?: boolean;
+	} = req.body;
+
+	submission.responded = !!submission.responded;
+	submission.accepted = !!submission.accepted;
+
+	console.log(submission);
+
 	if (!req.file) {
 		return res.status(400).send('Please upload a valid image');
 	}
 
-	console.log(req.body);
+	const companyCheck = await client.query({
+		text: 'SELECT id FROM company WHERE id = $1',
+		values: [submission.buissenessNr],
+	});
+
+	let subjectCheck = await client.query({
+		text: 'SELECT id FROM subject WHERE name = $1',
+		values: [submission.subject],
+	});
+
+	if (!subjectCheck.rows[0]) {
+		client.query({
+			text: 'INSERT INTO subject (name) VALUES ($1)',
+			values: [submission.subject],
+		});
+	}
+
+	subjectCheck = await client.query({
+		text: 'SELECT id FROM subject WHERE name = $1',
+		values: [submission.subject],
+	});
+
+	if (!companyCheck.rows[0]) {
+		client.query({
+			text: 'INSERT INTO company (id, name, subject_id) VALUES ($1, $2, $3)',
+			values: [
+				submission.buissenessNr,
+				submission.buissenessName.toUpperCase(),
+				subjectCheck.rows[0].id,
+			],
+		});
+	}
+
+	client.query({
+		text: 'INSERT INTO checked (company_id, timestamp, responded, accepted, proof) VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4)',
+		values: [
+			submission.buissenessNr,
+			submission.responded,
+			submission.accepted,
+			uniqueSuffix,
+		],
+	});
+
 	res.redirect(`http://${webserver_ip}:${webserver_port}`);
 });
 
 app.post('/admin/login', upload.none(), async (req, res) => {
 	const login: { username: string; password: string } = req.body;
 
-	const query = await client.query({
+	const matchingAdmin = await client.query({
 		text: 'SELECT id, username, passwordhash FROM admin WHERE username = $1',
 		values: [login.username],
 	});
 
-	if (query.rowCount === 0) {
-		return res.status(400).send('Invalid login');
+	if (matchingAdmin.rowCount === 0) {
+		return res.status(400).send('Your username or/and password is incorrect');
 	}
 
 	const compare = await bcrypt.compare(
 		login.password,
-		query.rows[0].passwordhash
+		matchingAdmin.rows[0].passwordhash
 	);
 
-	if (!compare) return;
+	if (!compare) {
+		return res.status(400).send('Your username or/and password is incorrect');
+	}
 
-	const key = crypto.randomBytes(32).toString('hex');
+	let key: string;
 
-	client.query({
-		text: 'INSERT INTO session (key, admin_id) VALUES ($1, $2)',
-		values: [key, query.rows[0].id],
+	const checkCookie = await client.query({
+		text: 'SELECT key, admin_id FROM session WHERE admin_id = $1',
+		values: [matchingAdmin.rows[0].id],
 	});
 
-	res.cookie('adminKey', key, { httpOnly: true, sameSite: true });
+	if (checkCookie.rowCount === 0) {
+		key = crypto.randomBytes(32).toString('hex');
+		client.query({
+			text: 'INSERT INTO session (key, admin_id) VALUES ($1, $2)',
+			values: [key, matchingAdmin.rows[0].id],
+		});
+	} else {
+		key = checkCookie.rows[0].key;
+	}
 
+	res.cookie('adminKey', key, { httpOnly: true, sameSite: true });
 	res.redirect(`http://${webserver_ip}:${webserver_port}/admin`);
 });
 
