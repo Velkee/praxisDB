@@ -7,8 +7,8 @@ body {
 
 body {
 	overflow: auto;
-	color: #b1b1b1;
-	background-color: #0a0a0a;
+	color: #d1d1d1;
+	background-color: #252525;
 	text-align: center;
 	margin: 0%;
 }
@@ -36,12 +36,19 @@ a {
 
 form {
 	padding: 1em;
-	border: 0.25em solid #b1b1b1;
+	background-color: #0a2d2d;
+	border: 0.25em solid #b1e575;
 	border-radius: 1em;
 }
 
-form input {
+form input,
+select,
+button {
 	margin: 1em;
+	background-color: #dea5a2;
+	color: #252525;
+	border-color: #b1e575;
+	border-radius: 0.25em;
 }
 
 .main-content {

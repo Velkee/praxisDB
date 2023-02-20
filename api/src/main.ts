@@ -5,6 +5,7 @@ import pg from 'pg';
 import bcrypt from 'bcrypt';
 import cookieparser from 'cookie-parser';
 import crypto from 'crypto';
+import cors from 'cors';
 
 dotenv.config();
 const api_port = process.env.API_PORT ?? 23450;
@@ -17,6 +18,7 @@ await client.connect();
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieparser());
+app.use(cors());
 
 async function validateCookie(key: string): Promise<number | undefined> {
 	const query = await client.query({
@@ -53,8 +55,6 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 
 	submission.responded = !!submission.responded;
 	submission.accepted = !!submission.accepted;
-
-	console.log(submission);
 
 	if (!req.file) {
 		return res.status(400).send('Please upload a valid image');
@@ -107,11 +107,11 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 });
 
 app.post('/admin/login', upload.none(), async (req, res) => {
-	const login: { username: string; password: string } = req.body;
+	const login: { adminUsername: string; adminPassword: string } = req.body;
 
 	const matchingAdmin = await client.query({
 		text: 'SELECT id, username, passwordhash FROM admin WHERE username = $1',
-		values: [login.username],
+		values: [login.adminUsername],
 	});
 
 	if (matchingAdmin.rowCount === 0) {
@@ -119,7 +119,7 @@ app.post('/admin/login', upload.none(), async (req, res) => {
 	}
 
 	const compare = await bcrypt.compare(
-		login.password,
+		login.adminPassword,
 		matchingAdmin.rows[0].passwordhash
 	);
 
@@ -152,7 +152,7 @@ app.get('/isloggedin', async (req, res) => {
 	if (!(await validateCookie(req.cookies.adminKey))) {
 		return res.status(401).send('Valid cookie not found');
 	}
-	res.status(200);
+	res.status(200).send();
 });
 
 app.post('/newadmin', upload.none(), async (req, res) => {
@@ -160,26 +160,36 @@ app.post('/newadmin', upload.none(), async (req, res) => {
 		return res.status(401).send('Valid cookie not found');
 	}
 
-	const info: { username: string; password: string } = req.body;
+	const info: { adminUsername: string; adminPassword: string } = req.body;
 	const saltRounds = 10;
 
 	const query = await client.query({
 		text: 'SELECT username FROM admin WHERE username = $1',
-		values: [info.username],
+		values: [info.adminUsername],
 	});
 
 	if (query.rows[0]) {
 		return res.status(409).send('User with that username already exists');
 	}
 
-	const hash = await bcrypt.hash(info.password, saltRounds);
+	const hash = await bcrypt.hash(info.adminPassword, saltRounds);
 
 	await client.query({
 		text: 'INSERT INTO admin(username, passwordhash) VALUES ($1, $2)',
-		values: [info.username, hash],
+		values: [info.adminUsername, hash],
 	});
 
 	res.redirect(`http://${webserver_ip}:${webserver_port}/admin`);
+});
+
+app.get('/subjects', async (_req, res) => {
+	const fetchSubjects = await client.query({ text: 'SELECT * FROM subject' });
+
+	if (fetchSubjects.rowCount === 0) {
+		return res.status(500).send('No subjects were found');
+	}
+
+	res.send(fetchSubjects.rows);
 });
 
 app.listen(api_port, () => {
