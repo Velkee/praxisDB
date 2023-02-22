@@ -14,15 +14,15 @@ body {
 }
 
 h1 {
-	font-size: 3.5em;
+	font-size: 4em;
 }
 
 h2 {
-	font-size: 2.5em;
+	font-size: 2em;
 }
 
 h3 {
-	font-size: 2em;
+	font-size: 1.5em;
 }
 
 p {
@@ -35,6 +35,7 @@ a {
 }
 
 form {
+	margin: 1em;
 	padding: 1em;
 	background-color: #0a2d2d;
 	border: 0.25em solid #b1e575;
@@ -52,14 +53,27 @@ button {
 }
 
 .main-content {
+	min-width: fit-content;
 	max-width: 50%;
 	margin: auto;
 }
 
 .split-up {
 	display: flex;
-	flex-flow: row wrap;
+	flex-flow: column wrap;
 	justify-content: center;
-	align-content: center;
-	gap: 2em;
+}
+
+.split-up a {
+	margin: 1em;
+	padding-left: 1em;
+	padding-right: 1em;
+	background-color: #0a2d2d;
+	border: 0.25em solid #b1e575;
+	border-radius: 1em;
+	transition: all 0.2s ease-in-out;
+}
+
+.split-up a:hover {
+	transform: scale(1.1);
 }
