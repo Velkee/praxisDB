@@ -112,11 +112,11 @@
     · Build the frontend with <code>npm run build</code>
   </p>
   <p>
-    · Run the frontend with <code>node build/index.js</code>
+    · Run the frontend with <code>PORT={your desired port} node build/index.js</code>
   </p>
   <p> -- OR --
   <p>
-    · Run a preview of the frontend with <code>npm run preview</code>. Default port is <code>4173</code>
+    · Run a preview of the frontend with <code>npm run preview</code>. Default port is <code>5173</code>
   </p>
   <br />
   <p>
