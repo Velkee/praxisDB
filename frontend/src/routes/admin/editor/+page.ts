@@ -4,9 +4,9 @@ const api_port = PUBLIC_API_PORT;
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch }) => {
-	const response = await fetch(`http://${api_ip}:${api_port}/subjects`);
+	const response = await fetch(`http://${api_ip}:${api_port}/admins`);
 
-	const data: { id: number; name: string }[] = await response.json();
+	const data: { id: number; username: string }[] = await response.json();
 
 	return { data };
 };

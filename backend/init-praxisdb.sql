@@ -119,10 +119,10 @@ INSERT INTO "subject" ("id", "name") VALUES
 (62,	'Børsemaker'),
 (63,	'Transport og logistikk');
 
-ALTER TABLE ONLY "public"."checked" ADD CONSTRAINT "check_admin_id_fkey" FOREIGN KEY (admin_id) REFERENCES admin(id) NOT DEFERRABLE;
-ALTER TABLE ONLY "public"."checked" ADD CONSTRAINT "check_company_id_fkey" FOREIGN KEY (company_id) REFERENCES company(id) NOT DEFERRABLE;
+ALTER TABLE ONLY "public"."checked" ADD CONSTRAINT "checked_admin_id_fkey" FOREIGN KEY (admin_id) REFERENCES admin(id) ON UPDATE CASCADE ON DELETE SET NULL NOT DEFERRABLE;
+ALTER TABLE ONLY "public"."checked" ADD CONSTRAINT "checked_company_id_fkey" FOREIGN KEY (company_id) REFERENCES company(id) ON UPDATE CASCADE ON DELETE CASCADE NOT DEFERRABLE;
 
-ALTER TABLE ONLY "public"."company_has_subject" ADD CONSTRAINT "company_has_subject_company_id_fkey" FOREIGN KEY (company_id) REFERENCES company(id) NOT DEFERRABLE;
+ALTER TABLE ONLY "public"."company_has_subject" ADD CONSTRAINT "company_has_subject_company_id_fkey" FOREIGN KEY (company_id) REFERENCES company(id) ON UPDATE CASCADE ON DELETE CASCADE NOT DEFERRABLE;
 ALTER TABLE ONLY "public"."company_has_subject" ADD CONSTRAINT "company_has_subject_subject_id_fkey" FOREIGN KEY (subject_id) REFERENCES subject(id) NOT DEFERRABLE;
 
-ALTER TABLE ONLY "public"."session" ADD CONSTRAINT "session_admin_id_fkey" FOREIGN KEY (admin_id) REFERENCES admin(id) NOT DEFERRABLE;
+ALTER TABLE ONLY "public"."session" ADD CONSTRAINT "session_admin_id_fkey" FOREIGN KEY (admin_id) REFERENCES admin(id) ON UPDATE CASCADE ON DELETE CASCADE NOT DEFERRABLE;

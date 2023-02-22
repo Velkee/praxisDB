@@ -1,5 +1,6 @@
 <header>
     <h1>praxisDB: Admin Pannel</h1>
+    <a href="/"><p>Back to Front Page</p></a>
 </header>
 
 <script>
@@ -10,18 +11,12 @@
 </script>
 
 <main class="main-content">
-    <form action='http://{api_ip}:{api_port}/newadmin' method="post">
-        <h2>Register a new admin</h2>
-        <label for="adminUsername">Admin's username:</label>
-        <br />
-        <input type="text" name="adminUsername" id="adminUsername" required>
-        <br />
+    <div class="split-up">
+		<a href="admin/submissions"><h2>Submissions</h2></a>
+        <a href="admin/editor"><h2>Admins</h2></a>
+	</div>
 
-        <label for="adminPassword">Admin's password:</label>
-        <br />
-        <input type="password" name="adminPassword" id="adminPassword" required>
-        <br />
-        
-        <button type="submit">Submit</button>
-    </form>
+    <div class="split-up">
+        <a href="http://{api_ip}:{api_port}/logout"><h2>Logout</h2></a>
+    </div>
 </main>

@@ -44,6 +44,28 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
+app.get('/subjects', async (_req, res) => {
+	const fetchSubjects = await client.query({ text: 'SELECT * FROM subject' });
+
+	if (fetchSubjects.rowCount === 0) {
+		return res.status(500).send('No subjects were found');
+	}
+
+	res.send(fetchSubjects.rows);
+});
+
+app.get('/admins', async (_req, res) => {
+	const fetchAdmins = await client.query({
+		text: 'SELECT id, username FROM admin',
+	});
+
+	if (fetchAdmins.rowCount === 0) {
+		return res.status(500).send('No admins were found');
+	}
+
+	res.send(fetchAdmins.rows);
+});
+
 app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 	const submission: {
 		buissenessName: string;
@@ -71,7 +93,7 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 	});
 
 	if (!subjectCheck.rows[0]) {
-		client.query({
+		await client.query({
 			text: 'INSERT INTO subject (name) VALUES ($1)',
 			values: [submission.subject],
 		});
@@ -83,7 +105,7 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 	});
 
 	if (!companyCheck.rows[0]) {
-		client.query({
+		await client.query({
 			text: 'INSERT INTO company (id, name, subject_id) VALUES ($1, $2, $3)',
 			values: [
 				submission.buissenessNr,
@@ -93,7 +115,7 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 		});
 	}
 
-	client.query({
+	await client.query({
 		text: 'INSERT INTO checked (company_id, timestamp, responded, accepted, proof) VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4)',
 		values: [
 			submission.buissenessNr,
@@ -104,6 +126,13 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 	});
 
 	res.redirect(`http://${webserver_ip}:${webserver_port}`);
+});
+
+app.get('/isloggedin', async (req, res) => {
+	if (!(await validateCookie(req.cookies.adminKey))) {
+		return res.status(401).send('Valid cookie not found');
+	}
+	res.status(200).send();
 });
 
 app.post('/admin/login', upload.none(), async (req, res) => {
@@ -136,7 +165,7 @@ app.post('/admin/login', upload.none(), async (req, res) => {
 
 	if (checkCookie.rowCount === 0) {
 		key = crypto.randomBytes(32).toString('hex');
-		client.query({
+		await client.query({
 			text: 'INSERT INTO session (key, admin_id) VALUES ($1, $2)',
 			values: [key, matchingAdmin.rows[0].id],
 		});
@@ -146,13 +175,6 @@ app.post('/admin/login', upload.none(), async (req, res) => {
 
 	res.cookie('adminKey', key, { httpOnly: true, sameSite: true });
 	res.redirect(`http://${webserver_ip}:${webserver_port}/admin`);
-});
-
-app.get('/isloggedin', async (req, res) => {
-	if (!(await validateCookie(req.cookies.adminKey))) {
-		return res.status(401).send('Valid cookie not found');
-	}
-	res.status(200).send();
 });
 
 app.post('/newadmin', upload.none(), async (req, res) => {
@@ -182,14 +204,45 @@ app.post('/newadmin', upload.none(), async (req, res) => {
 	res.redirect(`http://${webserver_ip}:${webserver_port}/admin`);
 });
 
-app.get('/subjects', async (_req, res) => {
-	const fetchSubjects = await client.query({ text: 'SELECT * FROM subject' });
-
-	if (fetchSubjects.rowCount === 0) {
-		return res.status(500).send('No subjects were found');
+app.post('/editadmin', upload.none(), async (req, res) => {
+	if (!(await validateCookie(req.cookies.adminKey))) {
+		return res.status(401).send('Valid cookie not found');
 	}
 
-	res.send(fetchSubjects.rows);
+	const update: { adminId: number; newPassword: string } = req.body;
+	const saltRounds = 10;
+
+	const hash = await bcrypt.hash(update.newPassword, saltRounds);
+
+	await client.query({
+		text: 'UPDATE admin SET passwordhash = $1 WHERE id = $2',
+		values: [hash, update.adminId],
+	});
+
+	res.clearCookie('adminKey');
+	res.redirect(`http://${webserver_ip}:${webserver_port}/admin/editor`);
+});
+
+app.post('/deleteadmin', upload.none(), async (req, res) => {
+	if (!(await validateCookie(req.cookies.adminKey))) {
+		return res.status(401).send('Valid cookie not found');
+	}
+
+	const update: { adminId: number; warning: boolean } = req.body;
+
+	update.warning = !!update.warning;
+
+	await client.query({
+		text: 'DELETE FROM admin WHERE id = $1',
+		values: [update.adminId],
+	});
+
+	res.redirect(`http://${webserver_ip}:${webserver_port}/admin/editor`);
+});
+
+app.get('/logout', upload.none(), (_req, res) => {
+	res.clearCookie('adminKey');
+	res.redirect(`http://${webserver_ip}:${webserver_port}`);
 });
 
 app.listen(api_port, () => {

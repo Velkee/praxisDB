@@ -8,6 +8,7 @@
 
 <header>
     <h1>praxisDB: Submit</h1>
+    <a href="/"><p>Back to Front Page</p></a>
 </header>
 
 <main class="main-content">
@@ -25,8 +26,8 @@
         <label for="subject">Which education programme are you taking?</label>
         <br />
         <select name="subject" id="subject">
-            {#each data.data as id}
-                <option value={id.id}>{id.name}</option>
+            {#each data.data as subject}
+                <option value={subject.id}>{subject.name}</option>
             {/each}
         </select>
         <br />
