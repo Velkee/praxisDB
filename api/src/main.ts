@@ -70,7 +70,7 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 	const submission: {
 		buissenessName: string;
 		buissenessNr: number;
-		subject: string;
+		subject: number;
 		responded?: boolean;
 		accepted?: boolean;
 	} = req.body;
@@ -82,36 +82,35 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 		return res.status(400).send('Please upload a valid image');
 	}
 
-	const companyCheck = await client.query({
+	let companyCheck = await client.query({
 		text: 'SELECT id FROM company WHERE id = $1',
 		values: [submission.buissenessNr],
 	});
 
-	let subjectCheck = await client.query({
-		text: 'SELECT id FROM subject WHERE name = $1',
-		values: [submission.subject],
-	});
-
-	if (!subjectCheck.rows[0]) {
+	if (companyCheck.rowCount === 0) {
 		await client.query({
-			text: 'INSERT INTO subject (name) VALUES ($1)',
-			values: [submission.subject],
-		});
-	}
-
-	subjectCheck = await client.query({
-		text: 'SELECT id FROM subject WHERE name = $1',
-		values: [submission.subject],
-	});
-
-	if (!companyCheck.rows[0]) {
-		await client.query({
-			text: 'INSERT INTO company (id, name, subject_id) VALUES ($1, $2, $3)',
+			text: 'INSERT INTO company (id, name) VALUES ($1, $2)',
 			values: [
 				submission.buissenessNr,
 				submission.buissenessName.toUpperCase(),
-				subjectCheck.rows[0].id,
 			],
+		});
+	}
+
+	companyCheck = await client.query({
+		text: 'SELECT id FROM company WHERE id = $1',
+		values: [submission.buissenessNr],
+	});
+
+	const checkLink = await client.query({
+		text: 'SELECT * FROM company_has_subject WHERE company_id = $1 AND subject_id = $2',
+		values: [companyCheck.rows[0].id, submission.subject],
+	});
+
+	if (checkLink.rowCount === 0) {
+		await client.query({
+			text: 'INSERT INTO company_has_subject (company_id, subject_id) VALUES ($1, $2)',
+			values: [companyCheck.rows[0].id, submission.subject],
 		});
 	}
 
