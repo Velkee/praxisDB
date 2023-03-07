@@ -47,7 +47,7 @@ const upload = multer({ storage: storage });
 app.get('/subjects', async (_req, res) => {
 	const fetchSubjects = await client.query({ text: 'SELECT * FROM subject' });
 
-	if (fetchSubjects.rowCount === 0) {
+	if (fetchSubjects.rows[0] === undefined) {
 		return res.status(500).send('No subjects were found');
 	}
 
@@ -64,6 +64,18 @@ app.get('/admins', async (_req, res) => {
 	}
 
 	res.send(fetchAdmins.rows);
+});
+
+app.get('/submissions', async (_req, res) => {
+	const fetchSubmissions = await client.query({
+		text: 'SELECT checked.company_id, company.name, checked.timestamp, checked.responded, checked.accepted, checked.admin_id, checked.proof, admin.username FROM checked LEFT JOIN admin ON checked.admin_id = admin.id INNER JOIN company ON checked.company_id = company.id',
+	});
+
+	if (fetchSubmissions.rowCount === 0) {
+		return res.status(404).send('No checks in the database');
+	}
+
+	res.send(fetchSubmissions.rows);
 });
 
 app.post('/submit', upload.single('imageUpload'), async (req, res) => {
