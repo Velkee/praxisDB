@@ -77,3 +77,12 @@ button {
 .split-up a:hover {
 	transform: scale(1.1);
 }
+
+.split-up div {
+	margin: 1em;
+	padding-left: 1em;
+	padding-right: 1em;
+	background-color: #0a2d2d;
+	border: 0.25em solid #b1e575;
+	border-radius: 1em;
+}
