@@ -4,7 +4,10 @@
 		"sourceRoot": "src",
 		"sourceMap": true,
 		"outDir": "dist",
-		"module": "esnext"
+		"module": "esnext",
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"lib": ["ES6"]
 	},
 	"ts-node": {
 		"esm": true

@@ -1,32 +1,29 @@
-import express from 'express';
-import multer from 'multer';
-import dotenv from 'dotenv';
-import pg from 'pg';
 import bcrypt from 'bcrypt';
 import cookieparser from 'cookie-parser';
-import crypto from 'crypto';
 import cors from 'cors';
+import crypto from 'crypto';
+import dotenv from 'dotenv';
+import express from 'express';
+import multer from 'multer';
+import 'reflect-metadata';
+import { AppDataSource } from './data-source';
+import { Session } from './entity/Session';
+
+await AppDataSource.initialize();
 
 dotenv.config();
 const api_port = process.env.API_PORT ?? 23450;
 const webserver_ip = process.env.WEBSERVER_IP ?? '0.0.0.0';
 const webserver_port = process.env.WEBSERVER_PORT ?? 80;
 
-const client = new pg.Client();
-await client.connect();
-
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieparser());
 app.use(cors());
 
-async function validateCookie(key: string): Promise<number | undefined> {
-	const query = await client.query({
-		text: 'SELECT admin_id FROM session WHERE key=$1',
-		values: [key],
-	});
-
-	return query.rows[0]?.admin_id;
+async function validateCookie(key: string): Promise<number | null> {
+	const admin = await AppDataSource.manager.findOneBy(Session, { key: key });
+	return admin?.id;
 }
 
 // Sets up multer's storage location
@@ -68,7 +65,7 @@ app.get('/admins', async (_req, res) => {
 
 app.get('/submissions', async (_req, res) => {
 	const fetchSubmissions = await client.query({
-		text: 'SELECT checked.company_id, company.name, checked.timestamp, checked.responded, checked.accepted, checked.admin_id, checked.proof, admin.username FROM checked LEFT JOIN admin ON checked.admin_id = admin.id INNER JOIN company ON checked.company_id = company.id',
+		text: 'SELECT checked.company_id, company.name AS company_name, company_has_subject.subject_id, subject.name AS subject_name, checked.timestamp, checked.responded, checked.accepted, checked.admin_id, checked.proof, admin.username AS admin_username FROM checked LEFT JOIN admin ON checked.admin_id = admin.id INNER JOIN company ON checked.company_id = company.id INNER JOIN company_has_subject ON company.id = company_has_subject.company_id INNER JOIN subject ON company_has_subject.subject_id = subject.id',
 	});
 
 	if (fetchSubmissions.rowCount === 0) {

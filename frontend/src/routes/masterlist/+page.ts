@@ -8,13 +8,13 @@ export const load: PageLoad = async ({ fetch }) => {
 
 	const data: {
 		company_id: number;
-		name: string;
+		company_name: string;
 		timestamp: string;
 		responded: boolean;
 		accepted: boolean;
 		admin_id: number | null;
 		proof: string;
-		username: string | null;
+		admin_username: string | null;
 	}[] = await response.json();
 
 	return { data };
