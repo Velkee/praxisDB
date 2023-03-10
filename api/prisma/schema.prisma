@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgres"
+  url      = env("DATABASE_URL")
+}
+
+model admin {
+  id           Int       @id @default(autoincrement())
+  username     String
+  passwordhash String
+  checked      checked[]
+  session      session[]
+}
+
+model checked {
+  id         Int      @id(map: "check_pkey") @default(autoincrement())
+  company_id Int
+  timestamp  DateTime @db.Timestamptz(6)
+  responded  Boolean
+  accepted   Boolean
+  admin_id   Int?
+  proof      String
+  admin      admin?   @relation(fields: [admin_id], references: [id])
+  company    company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+}
+
+model company {
+  id       Int       @id
+  name     String
+  checked  checked[]
+  subjects subject[] @relation("companyTosubject")
+}
+
+model session {
+  id       Int    @id @default(autoincrement())
+  key      String
+  admin_id Int
+  admin    admin  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+}
+
+model subject {
+  id        Int       @id @default(autoincrement())
+  name      String
+  companies company[] @relation("companyTosubject")
+}

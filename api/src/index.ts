@@ -1,15 +1,24 @@
+import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import cookieparser from 'cookie-parser';
 import cors from 'cors';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import express from 'express';
+import fs from 'fs';
 import multer from 'multer';
-import 'reflect-metadata';
-import { AppDataSource } from './data-source';
-import { Session } from './entity/Session';
 
-await AppDataSource.initialize();
+const prisma = new PrismaClient();
+
+if ((await prisma.subject.count()) == 0) {
+	const subject: string[] = JSON.parse(fs.readFileSync('./init.json', 'utf-8'));
+
+	await prisma.subject.createMany({
+		data: subject.map((x) => {
+			return { name: x };
+		}),
+	});
+}
 
 dotenv.config();
 const api_port = process.env.API_PORT ?? 23450;
@@ -21,8 +30,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieparser());
 app.use(cors());
 
-async function validateCookie(key: string): Promise<number | null> {
-	const admin = await AppDataSource.manager.findOneBy(Session, { key: key });
+async function validateCookie(key: string): Promise<number | undefined> {
+	const admin = await prisma.session.findFirst({ where: { key: key } });
 	return admin?.id;
 }
 
@@ -42,25 +51,23 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.get('/subjects', async (_req, res) => {
-	const fetchSubjects = await client.query({ text: 'SELECT * FROM subject' });
+	const fetchSubjects = await prisma.subject.findMany();
 
-	if (fetchSubjects.rows[0] === undefined) {
+	if (fetchSubjects.length == 0) {
 		return res.status(500).send('No subjects were found');
 	}
 
-	res.send(fetchSubjects.rows);
+	res.send(fetchSubjects);
 });
 
 app.get('/admins', async (_req, res) => {
-	const fetchAdmins = await client.query({
-		text: 'SELECT id, username FROM admin',
-	});
+	const fetchAdmins = await prisma.admin.findMany();
 
-	if (fetchAdmins.rowCount === 0) {
+	if (fetchAdmins.length == 0) {
 		return res.status(500).send('No admins were found');
 	}
 
-	res.send(fetchAdmins.rows);
+	res.send(fetchAdmins);
 });
 
 app.get('/submissions', async (_req, res) => {
@@ -91,47 +98,49 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 		return res.status(400).send('Please upload a valid image');
 	}
 
-	let companyCheck = await client.query({
-		text: 'SELECT id FROM company WHERE id = $1',
-		values: [submission.buissenessNr],
+	let companyCheck = await prisma.company.findMany({
+		where: { id: submission.buissenessNr },
 	});
 
-	if (companyCheck.rowCount === 0) {
-		await client.query({
-			text: 'INSERT INTO company (id, name) VALUES ($1, $2)',
-			values: [
-				submission.buissenessNr,
-				submission.buissenessName.toUpperCase(),
-			],
+	if (companyCheck.length == 0) {
+		await prisma.company.create({
+			data: { id: submission.buissenessNr, name: submission.buissenessName },
+		});
+
+		companyCheck = await prisma.company.findMany({
+			where: { id: submission.buissenessNr },
 		});
 	}
 
-	companyCheck = await client.query({
-		text: 'SELECT id FROM company WHERE id = $1',
-		values: [submission.buissenessNr],
+	const checkLink = await prisma.company.findMany({
+		where: { subjects: { some: { id: submission.subject } } },
+		select: { _count: true },
 	});
 
-	const checkLink = await client.query({
-		text: 'SELECT * FROM company_has_subject WHERE company_id = $1 AND subject_id = $2',
-		values: [companyCheck.rows[0].id, submission.subject],
-	});
-
-	if (checkLink.rowCount === 0) {
-		await client.query({
-			text: 'INSERT INTO company_has_subject (company_id, subject_id) VALUES ($1, $2)',
-			values: [companyCheck.rows[0].id, submission.subject],
+	if (checkLink.length == 0) {
+		await prisma.company.update({
+			where: { id: submission.buissenessNr },
+			data: { subjects: { connect: { id: submission.subject } } },
 		});
 	}
 
-	await client.query({
-		text: 'INSERT INTO checked (company_id, timestamp, responded, accepted, proof) VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4)',
-		values: [
-			submission.buissenessNr,
-			submission.responded,
-			submission.accepted,
-			uniqueSuffix,
-		],
+	await prisma.checked.create({
+		data: {
+			company_id: submission.buissenessNr,
+			responded: submission.responded,
+			accepted: submission.accepted,
+			proof: uniqueSuffix,
+		},
 	});
+	// await client.query({
+	// 	text: 'INSERT INTO checked (company_id, timestamp, responded, accepted, proof) VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4)',
+	// 	values: [
+	// 		submission.buissenessNr,
+	// 		submission.responded,
+	// 		submission.accepted,
+	// 		uniqueSuffix,
+	// 	],
+	// });
 
 	res.redirect(`http://${webserver_ip}:${webserver_port}`);
 });
