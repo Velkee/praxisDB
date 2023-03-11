@@ -71,15 +71,16 @@ app.get('/admins', async (_req, res) => {
 });
 
 app.get('/submissions', async (_req, res) => {
-	const fetchSubmissions = await client.query({
-		text: 'SELECT checked.company_id, company.name AS company_name, company_has_subject.subject_id, subject.name AS subject_name, checked.timestamp, checked.responded, checked.accepted, checked.admin_id, checked.proof, admin.username AS admin_username FROM checked LEFT JOIN admin ON checked.admin_id = admin.id INNER JOIN company ON checked.company_id = company.id INNER JOIN company_has_subject ON company.id = company_has_subject.company_id INNER JOIN subject ON company_has_subject.subject_id = subject.id',
-	});
+	const fetchSubmissions = await prisma.checked.findMany()
+	// const fetchSubmissions = await client.query({
+	// 	text: 'SELECT checked.company_id, company.name AS company_name, company_has_subject.subject_id, subject.name AS subject_name, checked.timestamp, checked.responded, checked.accepted, checked.admin_id, checked.proof, admin.username AS admin_username FROM checked LEFT JOIN admin ON checked.admin_id = admin.id INNER JOIN company ON checked.company_id = company.id INNER JOIN company_has_subject ON company.id = company_has_subject.company_id INNER JOIN subject ON company_has_subject.subject_id = subject.id',
+	// });
 
-	if (fetchSubmissions.rowCount === 0) {
-		return res.status(404).send('No checks in the database');
-	}
+	// if (fetchSubmissions.rowCount === 0) {
+	// 	return res.status(404).send('No checks in the database');
+	// }
 
-	res.send(fetchSubmissions.rows);
+	res.send(fetchSubmissions);
 });
 
 app.post('/submit', upload.single('imageUpload'), async (req, res) => {
@@ -126,10 +127,10 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 
 	await prisma.checked.create({
 		data: {
-			company_id: submission.buissenessNr,
 			responded: submission.responded,
 			accepted: submission.accepted,
 			proof: uniqueSuffix,
+			company: {connect: {id: submission.buissenessNr}}
 		},
 	});
 	// await client.query({
@@ -155,18 +156,15 @@ app.get('/isloggedin', async (req, res) => {
 app.post('/admin/login', upload.none(), async (req, res) => {
 	const login: { adminUsername: string; adminPassword: string } = req.body;
 
-	const matchingAdmin = await client.query({
-		text: 'SELECT id, username, passwordhash FROM admin WHERE username = $1',
-		values: [login.adminUsername],
-	});
+	const matchingAdmin = await prisma.admin.findMany({where: {username: login.adminUsername}});
 
-	if (matchingAdmin.rowCount === 0) {
+	if (matchingAdmin.length == 0) {
 		return res.status(400).send('Your username or/and password is incorrect');
 	}
 
 	const compare = await bcrypt.compare(
 		login.adminPassword,
-		matchingAdmin.rows[0].passwordhash
+		matchingAdmin[0].passwordhash
 	);
 
 	if (!compare) {
@@ -175,19 +173,13 @@ app.post('/admin/login', upload.none(), async (req, res) => {
 
 	let key: string;
 
-	const checkCookie = await client.query({
-		text: 'SELECT key, admin_id FROM session WHERE admin_id = $1',
-		values: [matchingAdmin.rows[0].id],
-	});
+	const checkCookie = await prisma.session.findMany({where: {admin_id: matchingAdmin[0].id}})
 
-	if (checkCookie.rowCount === 0) {
+	if (checkCookie.length == 0) {
 		key = crypto.randomBytes(32).toString('hex');
-		await client.query({
-			text: 'INSERT INTO session (key, admin_id) VALUES ($1, $2)',
-			values: [key, matchingAdmin.rows[0].id],
-		});
+		await prisma.session.create({data: {key: key, admin_id: matchingAdmin[0].id}})
 	} else {
-		key = checkCookie.rows[0].key;
+		key = checkCookie[0].key
 	}
 
 	res.cookie('adminKey', key, { httpOnly: true, sameSite: true });
@@ -202,21 +194,15 @@ app.post('/newadmin', upload.none(), async (req, res) => {
 	const info: { adminUsername: string; adminPassword: string } = req.body;
 	const saltRounds = 10;
 
-	const query = await client.query({
-		text: 'SELECT username FROM admin WHERE username = $1',
-		values: [info.adminUsername],
-	});
+	const query = await prisma.admin.findMany({where: {username: info.adminUsername}})
 
-	if (query.rows[0]) {
+	if (query.length != 0) {
 		return res.status(409).send('User with that username already exists');
 	}
 
 	const hash = await bcrypt.hash(info.adminPassword, saltRounds);
 
-	await client.query({
-		text: 'INSERT INTO admin(username, passwordhash) VALUES ($1, $2)',
-		values: [info.adminUsername, hash],
-	});
+	await prisma.admin.create({data: {username: info.adminUsername, passwordhash: hash}})
 
 	res.redirect(`http://${webserver_ip}:${webserver_port}/admin`);
 });
@@ -231,10 +217,7 @@ app.post('/editadmin', upload.none(), async (req, res) => {
 
 	const hash = await bcrypt.hash(update.newPassword, saltRounds);
 
-	await client.query({
-		text: 'UPDATE admin SET passwordhash = $1 WHERE id = $2',
-		values: [hash, update.adminId],
-	});
+	await prisma.admin.update({where: {id: update.adminId}, data: {passwordhash: hash}})
 
 	res.clearCookie('adminKey');
 	res.redirect(`http://${webserver_ip}:${webserver_port}/admin/editor`);
@@ -249,10 +232,7 @@ app.post('/deleteadmin', upload.none(), async (req, res) => {
 
 	update.warning = !!update.warning;
 
-	await client.query({
-		text: 'DELETE FROM admin WHERE id = $1',
-		values: [update.adminId],
-	});
+	await prisma.admin.delete({where: {id: update.adminId}})
 
 	res.redirect(`http://${webserver_ip}:${webserver_port}/admin/editor`);
 });
