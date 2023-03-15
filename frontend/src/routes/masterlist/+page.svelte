@@ -12,7 +12,7 @@
 	<div class="split-up">
 		{#each data.data as check}
 			<div>
-				<p>Company name: {check.company_name}</p>
+				<p>Company name: {check.company.name}</p>
 				<p>Company number: {check.company_id}</p>
 				<p>Last checked: {check.timestamp.slice(0, 10)}</p>
 				<p>
@@ -36,7 +36,7 @@
 					{#if check.admin_id === null}
 						Not verified
 					{:else}
-						{check.admin_username}
+						{check.admin?.name}
 					{/if}
 				</p>
 			</div>

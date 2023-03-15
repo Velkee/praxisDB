@@ -51,7 +51,9 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.get('/subjects', async (_req, res) => {
-	const fetchSubjects = await prisma.subject.findMany();
+	const fetchSubjects = await prisma.subject.findMany({
+		orderBy: { name: 'asc' },
+	});
 
 	if (fetchSubjects.length == 0) {
 		return res.status(500).send('No subjects were found');
@@ -71,14 +73,16 @@ app.get('/admins', async (_req, res) => {
 });
 
 app.get('/submissions', async (_req, res) => {
-	const fetchSubmissions = await prisma.checked.findMany()
-	// const fetchSubmissions = await client.query({
-	// 	text: 'SELECT checked.company_id, company.name AS company_name, company_has_subject.subject_id, subject.name AS subject_name, checked.timestamp, checked.responded, checked.accepted, checked.admin_id, checked.proof, admin.username AS admin_username FROM checked LEFT JOIN admin ON checked.admin_id = admin.id INNER JOIN company ON checked.company_id = company.id INNER JOIN company_has_subject ON company.id = company_has_subject.company_id INNER JOIN subject ON company_has_subject.subject_id = subject.id',
-	// });
+	const fetchSubmissions = await prisma.checked.findMany({
+		orderBy: { company: { name: 'asc' } },
 
-	// if (fetchSubmissions.rowCount === 0) {
-	// 	return res.status(404).send('No checks in the database');
-	// }
+		include: {
+			company: {
+				select: { name: true, subjects: { select: { name: true } } },
+			},
+			admin: { select: { username: true } },
+		},
+	});
 
 	res.send(fetchSubmissions);
 });
@@ -86,8 +90,8 @@ app.get('/submissions', async (_req, res) => {
 app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 	const submission: {
 		buissenessName: string;
-		buissenessNr: number;
-		subject: number;
+		buissenessNr: string;
+		subject: string;
 		responded?: boolean;
 		accepted?: boolean;
 	} = req.body;
@@ -100,48 +104,43 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 	}
 
 	let companyCheck = await prisma.company.findMany({
-		where: { id: submission.buissenessNr },
+		where: { id: parseInt(submission.buissenessNr) },
 	});
 
 	if (companyCheck.length == 0) {
 		await prisma.company.create({
-			data: { id: submission.buissenessNr, name: submission.buissenessName },
+			data: {
+				id: parseInt(submission.buissenessNr),
+				name: submission.buissenessName,
+			},
 		});
 
 		companyCheck = await prisma.company.findMany({
-			where: { id: submission.buissenessNr },
+			where: { id: parseInt(submission.buissenessNr) },
 		});
 	}
 
 	const checkLink = await prisma.company.findMany({
-		where: { subjects: { some: { id: submission.subject } } },
+		where: { subjects: { some: { id: parseInt(submission.subject) } } },
 		select: { _count: true },
 	});
 
 	if (checkLink.length == 0) {
 		await prisma.company.update({
-			where: { id: submission.buissenessNr },
-			data: { subjects: { connect: { id: submission.subject } } },
+			where: { id: parseInt(submission.buissenessNr) },
+			data: { subjects: { connect: { id: parseInt(submission.subject) } } },
 		});
 	}
 
 	await prisma.checked.create({
 		data: {
+			company: { connect: { id: parseInt(submission.buissenessNr) } },
 			responded: submission.responded,
 			accepted: submission.accepted,
 			proof: uniqueSuffix,
-			company: {connect: {id: submission.buissenessNr}}
+			timestamp: new Date(),
 		},
 	});
-	// await client.query({
-	// 	text: 'INSERT INTO checked (company_id, timestamp, responded, accepted, proof) VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4)',
-	// 	values: [
-	// 		submission.buissenessNr,
-	// 		submission.responded,
-	// 		submission.accepted,
-	// 		uniqueSuffix,
-	// 	],
-	// });
 
 	res.redirect(`http://${webserver_ip}:${webserver_port}`);
 });
@@ -156,7 +155,9 @@ app.get('/isloggedin', async (req, res) => {
 app.post('/admin/login', upload.none(), async (req, res) => {
 	const login: { adminUsername: string; adminPassword: string } = req.body;
 
-	const matchingAdmin = await prisma.admin.findMany({where: {username: login.adminUsername}});
+	const matchingAdmin = await prisma.admin.findMany({
+		where: { username: login.adminUsername },
+	});
 
 	if (matchingAdmin.length == 0) {
 		return res.status(400).send('Your username or/and password is incorrect');
@@ -168,18 +169,22 @@ app.post('/admin/login', upload.none(), async (req, res) => {
 	);
 
 	if (!compare) {
-		return res.status(400).send('Your username or/and password is incorrect');
+		return res.status(400).send('Your password is incorrect');
 	}
 
 	let key: string;
 
-	const checkCookie = await prisma.session.findMany({where: {admin_id: matchingAdmin[0].id}})
+	const checkCookie = await prisma.session.findMany({
+		where: { admin_id: matchingAdmin[0].id },
+	});
 
 	if (checkCookie.length == 0) {
 		key = crypto.randomBytes(32).toString('hex');
-		await prisma.session.create({data: {key: key, admin_id: matchingAdmin[0].id}})
+		await prisma.session.create({
+			data: { key: key, admin_id: matchingAdmin[0].id },
+		});
 	} else {
-		key = checkCookie[0].key
+		key = checkCookie[0].key;
 	}
 
 	res.cookie('adminKey', key, { httpOnly: true, sameSite: true });
@@ -194,7 +199,9 @@ app.post('/newadmin', upload.none(), async (req, res) => {
 	const info: { adminUsername: string; adminPassword: string } = req.body;
 	const saltRounds = 10;
 
-	const query = await prisma.admin.findMany({where: {username: info.adminUsername}})
+	const query = await prisma.admin.findMany({
+		where: { username: info.adminUsername },
+	});
 
 	if (query.length != 0) {
 		return res.status(409).send('User with that username already exists');
@@ -202,7 +209,9 @@ app.post('/newadmin', upload.none(), async (req, res) => {
 
 	const hash = await bcrypt.hash(info.adminPassword, saltRounds);
 
-	await prisma.admin.create({data: {username: info.adminUsername, passwordhash: hash}})
+	await prisma.admin.create({
+		data: { username: info.adminUsername, passwordhash: hash },
+	});
 
 	res.redirect(`http://${webserver_ip}:${webserver_port}/admin`);
 });
@@ -217,7 +226,10 @@ app.post('/editadmin', upload.none(), async (req, res) => {
 
 	const hash = await bcrypt.hash(update.newPassword, saltRounds);
 
-	await prisma.admin.update({where: {id: update.adminId}, data: {passwordhash: hash}})
+	await prisma.admin.update({
+		where: { id: update.adminId },
+		data: { passwordhash: hash },
+	});
 
 	res.clearCookie('adminKey');
 	res.redirect(`http://${webserver_ip}:${webserver_port}/admin/editor`);
@@ -232,7 +244,7 @@ app.post('/deleteadmin', upload.none(), async (req, res) => {
 
 	update.warning = !!update.warning;
 
-	await prisma.admin.delete({where: {id: update.adminId}})
+	await prisma.admin.delete({ where: { id: update.adminId } });
 
 	res.redirect(`http://${webserver_ip}:${webserver_port}/admin/editor`);
 });
