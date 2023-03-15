@@ -20,6 +20,15 @@ if ((await prisma.subject.count()) == 0) {
 	});
 }
 
+if ((await prisma.admin.count()) == 0) {
+	const salt = 10;
+	const hash = await bcrypt.hash('changeme', salt);
+
+	await prisma.admin.create({
+		data: { username: 'admin', passwordhash: hash },
+	});
+}
+
 dotenv.config();
 const api_port = process.env.API_PORT ?? 23450;
 const webserver_ip = process.env.WEBSERVER_IP ?? '0.0.0.0';
@@ -221,13 +230,17 @@ app.post('/editadmin', upload.none(), async (req, res) => {
 		return res.status(401).send('Valid cookie not found');
 	}
 
-	const update: { adminId: number; newPassword: string } = req.body;
+	const update: { oldPassword: string; newPassword: string } = req.body;
 	const saltRounds = 10;
 
 	const hash = await bcrypt.hash(update.newPassword, saltRounds);
+	const idFromSession = await prisma.session.findMany({
+		where: { key: req.cookies.adminKey },
+		select: { admin_id: true },
+	});
 
 	await prisma.admin.update({
-		where: { id: update.adminId },
+		where: { id: idFromSession[0].admin_id },
 		data: { passwordhash: hash },
 	});
 
