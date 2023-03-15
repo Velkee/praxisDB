@@ -1,19 +1,29 @@
-import express from 'express';
-import multer from 'multer';
-import dotenv from 'dotenv';
-import pg from 'pg';
+import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import cookieparser from 'cookie-parser';
-import crypto from 'crypto';
 import cors from 'cors';
+import crypto from 'crypto';
+import dotenv from 'dotenv';
+import express from 'express';
+import fs from 'fs';
+import multer from 'multer';
+
+const prisma = new PrismaClient();
+
+if ((await prisma.subject.count()) == 0) {
+	const subject: string[] = JSON.parse(fs.readFileSync('./init.json', 'utf-8'));
+
+	await prisma.subject.createMany({
+		data: subject.map((x) => {
+			return { name: x };
+		}),
+	});
+}
 
 dotenv.config();
 const api_port = process.env.API_PORT ?? 23450;
 const webserver_ip = process.env.WEBSERVER_IP ?? '0.0.0.0';
 const webserver_port = process.env.WEBSERVER_PORT ?? 80;
-
-const client = new pg.Client();
-await client.connect();
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
@@ -21,12 +31,8 @@ app.use(cookieparser());
 app.use(cors());
 
 async function validateCookie(key: string): Promise<number | undefined> {
-	const query = await client.query({
-		text: 'SELECT admin_id FROM session WHERE key=$1',
-		values: [key],
-	});
-
-	return query.rows[0]?.admin_id;
+	const admin = await prisma.session.findFirst({ where: { key: key } });
+	return admin?.id;
 }
 
 // Sets up multer's storage location
@@ -45,44 +51,47 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.get('/subjects', async (_req, res) => {
-	const fetchSubjects = await client.query({ text: 'SELECT * FROM subject' });
+	const fetchSubjects = await prisma.subject.findMany({
+		orderBy: { name: 'asc' },
+	});
 
-	if (fetchSubjects.rows[0] === undefined) {
+	if (fetchSubjects.length == 0) {
 		return res.status(500).send('No subjects were found');
 	}
 
-	res.send(fetchSubjects.rows);
+	res.send(fetchSubjects);
 });
 
 app.get('/admins', async (_req, res) => {
-	const fetchAdmins = await client.query({
-		text: 'SELECT id, username FROM admin',
-	});
+	const fetchAdmins = await prisma.admin.findMany();
 
-	if (fetchAdmins.rowCount === 0) {
+	if (fetchAdmins.length == 0) {
 		return res.status(500).send('No admins were found');
 	}
 
-	res.send(fetchAdmins.rows);
+	res.send(fetchAdmins);
 });
 
 app.get('/submissions', async (_req, res) => {
-	const fetchSubmissions = await client.query({
-		text: 'SELECT checked.company_id, company.name, checked.timestamp, checked.responded, checked.accepted, checked.admin_id, checked.proof, admin.username FROM checked LEFT JOIN admin ON checked.admin_id = admin.id INNER JOIN company ON checked.company_id = company.id',
+	const fetchSubmissions = await prisma.checked.findMany({
+		orderBy: { company: { name: 'asc' } },
+
+		include: {
+			company: {
+				select: { name: true, subjects: { select: { name: true } } },
+			},
+			admin: { select: { username: true } },
+		},
 	});
 
-	if (fetchSubmissions.rowCount === 0) {
-		return res.status(404).send('No checks in the database');
-	}
-
-	res.send(fetchSubmissions.rows);
+	res.send(fetchSubmissions);
 });
 
 app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 	const submission: {
 		buissenessName: string;
-		buissenessNr: number;
-		subject: number;
+		buissenessNr: string;
+		subject: string;
 		responded?: boolean;
 		accepted?: boolean;
 	} = req.body;
@@ -94,46 +103,43 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 		return res.status(400).send('Please upload a valid image');
 	}
 
-	let companyCheck = await client.query({
-		text: 'SELECT id FROM company WHERE id = $1',
-		values: [submission.buissenessNr],
+	let companyCheck = await prisma.company.findMany({
+		where: { id: parseInt(submission.buissenessNr) },
 	});
 
-	if (companyCheck.rowCount === 0) {
-		await client.query({
-			text: 'INSERT INTO company (id, name) VALUES ($1, $2)',
-			values: [
-				submission.buissenessNr,
-				submission.buissenessName.toUpperCase(),
-			],
+	if (companyCheck.length == 0) {
+		await prisma.company.create({
+			data: {
+				id: parseInt(submission.buissenessNr),
+				name: submission.buissenessName,
+			},
+		});
+
+		companyCheck = await prisma.company.findMany({
+			where: { id: parseInt(submission.buissenessNr) },
 		});
 	}
 
-	companyCheck = await client.query({
-		text: 'SELECT id FROM company WHERE id = $1',
-		values: [submission.buissenessNr],
+	const checkLink = await prisma.company.findMany({
+		where: { subjects: { some: { id: parseInt(submission.subject) } } },
+		select: { _count: true },
 	});
 
-	const checkLink = await client.query({
-		text: 'SELECT * FROM company_has_subject WHERE company_id = $1 AND subject_id = $2',
-		values: [companyCheck.rows[0].id, submission.subject],
-	});
-
-	if (checkLink.rowCount === 0) {
-		await client.query({
-			text: 'INSERT INTO company_has_subject (company_id, subject_id) VALUES ($1, $2)',
-			values: [companyCheck.rows[0].id, submission.subject],
+	if (checkLink.length == 0) {
+		await prisma.company.update({
+			where: { id: parseInt(submission.buissenessNr) },
+			data: { subjects: { connect: { id: parseInt(submission.subject) } } },
 		});
 	}
 
-	await client.query({
-		text: 'INSERT INTO checked (company_id, timestamp, responded, accepted, proof) VALUES ($1, CURRENT_TIMESTAMP, $2, $3, $4)',
-		values: [
-			submission.buissenessNr,
-			submission.responded,
-			submission.accepted,
-			uniqueSuffix,
-		],
+	await prisma.checked.create({
+		data: {
+			company: { connect: { id: parseInt(submission.buissenessNr) } },
+			responded: submission.responded,
+			accepted: submission.accepted,
+			proof: uniqueSuffix,
+			timestamp: new Date(),
+		},
 	});
 
 	res.redirect(`http://${webserver_ip}:${webserver_port}`);
@@ -149,39 +155,36 @@ app.get('/isloggedin', async (req, res) => {
 app.post('/admin/login', upload.none(), async (req, res) => {
 	const login: { adminUsername: string; adminPassword: string } = req.body;
 
-	const matchingAdmin = await client.query({
-		text: 'SELECT id, username, passwordhash FROM admin WHERE username = $1',
-		values: [login.adminUsername],
+	const matchingAdmin = await prisma.admin.findMany({
+		where: { username: login.adminUsername },
 	});
 
-	if (matchingAdmin.rowCount === 0) {
+	if (matchingAdmin.length == 0) {
 		return res.status(400).send('Your username or/and password is incorrect');
 	}
 
 	const compare = await bcrypt.compare(
 		login.adminPassword,
-		matchingAdmin.rows[0].passwordhash
+		matchingAdmin[0].passwordhash
 	);
 
 	if (!compare) {
-		return res.status(400).send('Your username or/and password is incorrect');
+		return res.status(400).send('Your password is incorrect');
 	}
 
 	let key: string;
 
-	const checkCookie = await client.query({
-		text: 'SELECT key, admin_id FROM session WHERE admin_id = $1',
-		values: [matchingAdmin.rows[0].id],
+	const checkCookie = await prisma.session.findMany({
+		where: { admin_id: matchingAdmin[0].id },
 	});
 
-	if (checkCookie.rowCount === 0) {
+	if (checkCookie.length == 0) {
 		key = crypto.randomBytes(32).toString('hex');
-		await client.query({
-			text: 'INSERT INTO session (key, admin_id) VALUES ($1, $2)',
-			values: [key, matchingAdmin.rows[0].id],
+		await prisma.session.create({
+			data: { key: key, admin_id: matchingAdmin[0].id },
 		});
 	} else {
-		key = checkCookie.rows[0].key;
+		key = checkCookie[0].key;
 	}
 
 	res.cookie('adminKey', key, { httpOnly: true, sameSite: true });
@@ -196,20 +199,18 @@ app.post('/newadmin', upload.none(), async (req, res) => {
 	const info: { adminUsername: string; adminPassword: string } = req.body;
 	const saltRounds = 10;
 
-	const query = await client.query({
-		text: 'SELECT username FROM admin WHERE username = $1',
-		values: [info.adminUsername],
+	const query = await prisma.admin.findMany({
+		where: { username: info.adminUsername },
 	});
 
-	if (query.rows[0]) {
+	if (query.length != 0) {
 		return res.status(409).send('User with that username already exists');
 	}
 
 	const hash = await bcrypt.hash(info.adminPassword, saltRounds);
 
-	await client.query({
-		text: 'INSERT INTO admin(username, passwordhash) VALUES ($1, $2)',
-		values: [info.adminUsername, hash],
+	await prisma.admin.create({
+		data: { username: info.adminUsername, passwordhash: hash },
 	});
 
 	res.redirect(`http://${webserver_ip}:${webserver_port}/admin`);
@@ -225,9 +226,9 @@ app.post('/editadmin', upload.none(), async (req, res) => {
 
 	const hash = await bcrypt.hash(update.newPassword, saltRounds);
 
-	await client.query({
-		text: 'UPDATE admin SET passwordhash = $1 WHERE id = $2',
-		values: [hash, update.adminId],
+	await prisma.admin.update({
+		where: { id: update.adminId },
+		data: { passwordhash: hash },
 	});
 
 	res.clearCookie('adminKey');
@@ -243,10 +244,7 @@ app.post('/deleteadmin', upload.none(), async (req, res) => {
 
 	update.warning = !!update.warning;
 
-	await client.query({
-		text: 'DELETE FROM admin WHERE id = $1',
-		values: [update.adminId],
-	});
+	await prisma.admin.delete({ where: { id: update.adminId } });
 
 	res.redirect(`http://${webserver_ip}:${webserver_port}/admin/editor`);
 });
