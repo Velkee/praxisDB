@@ -1,5 +1,4 @@
-<script>
-	// @ts-ignore
+<script lang="ts">
 	import { PUBLIC_API_IP, PUBLIC_API_PORT } from '$env/static/public';
 	const api_ip = PUBLIC_API_IP;
 	const api_port = PUBLIC_API_PORT;

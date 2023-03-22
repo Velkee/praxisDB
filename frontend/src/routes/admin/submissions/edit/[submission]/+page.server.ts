@@ -5,9 +5,9 @@ const api_ip = PUBLIC_API_IP;
 const api_port = PUBLIC_API_PORT;
 
 export const load: PageServerLoad = async ({ fetch }) => {
-	const response = await fetch(`http://${api_ip}:${api_port}/isloggedin`);
+	const check = await fetch(`http://${api_ip}:${api_port}/isloggedin`);
 
-	if (!response.ok) {
+	if (!check.ok) {
 		throw redirect(303, '/admin/login');
 	}
 };

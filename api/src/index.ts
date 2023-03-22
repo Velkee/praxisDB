@@ -39,8 +39,12 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieparser());
 app.use(cors());
 
-async function validateCookie(key: string): Promise<number | undefined> {
-	const admin = await prisma.session.findFirst({ where: { key: key } });
+async function validateCookie(key?: string): Promise<number | undefined> {
+	if (key == undefined) {
+		return undefined;
+	}
+
+	const admin = await prisma.session.findUnique({ where: { key: key } });
 	return admin?.id;
 }
 
@@ -50,10 +54,13 @@ let uniqueSuffix: string;
 
 const storage = multer.diskStorage({
 	destination: (_req, _file, cb) => {
-		cb(null, './tmp/uploads');
+		cb(null, './uploads');
 	},
 	filename: (_req, file, cb) => {
-		uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+		const extArray = file.mimetype.split('/');
+		const extension = extArray[extArray.length - 1];
+		uniqueSuffix =
+			Date.now() + '-' + Math.round(Math.random() * 1e9) + '.' + extension;
 		cb(null, file.fieldname + '-' + uniqueSuffix);
 	},
 });
@@ -72,13 +79,24 @@ app.get('/subjects', async (_req, res) => {
 });
 
 app.get('/admins', async (_req, res) => {
-	const fetchAdmins = await prisma.admin.findMany();
+	const fetchAdmins = await prisma.admin.findMany({
+		select: { id: true, username: true },
+	});
 
 	if (fetchAdmins.length == 0) {
 		return res.status(500).send('No admins were found');
 	}
 
 	res.send(fetchAdmins);
+});
+
+app.get('/files/:suffix', (req, res) => {
+	res.sendFile(
+		process.cwd() + '/uploads/imageUpload-' + req.params.suffix,
+		(err) => {
+			if (err) res.status(404).send('Image could not be found');
+		}
+	);
 });
 
 app.get('/submissions', async (_req, res) => {
@@ -94,6 +112,20 @@ app.get('/submissions', async (_req, res) => {
 	});
 
 	res.send(fetchSubmissions);
+});
+
+app.get('/submissions/:submission', async (req, res) => {
+	const submissionId = parseInt(req.params.submission);
+
+	const fetchSubmission = await prisma.checked.findFirst({
+		where: { id: submissionId },
+		include: {
+			company: { select: { name: true, subjects: { select: { name: true } } } },
+			admin: { select: { username: true } },
+		},
+	});
+
+	res.send(fetchSubmission);
 });
 
 app.post('/submit', upload.single('imageUpload'), async (req, res) => {
@@ -155,49 +187,54 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 });
 
 app.get('/isloggedin', async (req, res) => {
-	if (!(await validateCookie(req.cookies.adminKey))) {
+	if ((await validateCookie(req.cookies.adminKey)) === undefined) {
 		return res.status(401).send('Valid cookie not found');
 	}
 	res.status(200).send();
 });
 
 app.post('/admin/login', upload.none(), async (req, res) => {
-	const login: { adminUsername: string; adminPassword: string } = req.body;
+	const login: { adminUsername?: string; adminPassword?: string } = req.body;
 
-	const matchingAdmin = await prisma.admin.findMany({
+	if (login.adminUsername === undefined || login.adminPassword === undefined) {
+		return res.status(400).send('No username/password provided');
+	}
+
+	const matchingAdmin = await prisma.admin.findUnique({
 		where: { username: login.adminUsername },
 	});
 
-	if (matchingAdmin.length == 0) {
-		return res.status(400).send('Your username or/and password is incorrect');
+	if (matchingAdmin === null) {
+		return res.status(401).send('Your username or/and password is incorrect');
 	}
 
 	const compare = await bcrypt.compare(
 		login.adminPassword,
-		matchingAdmin[0].passwordhash
+		matchingAdmin.passwordhash
 	);
 
 	if (!compare) {
-		return res.status(400).send('Your password is incorrect');
+		return res.status(401).send('Your username or/and password is incorrect');
 	}
 
 	let key: string;
 
 	const checkCookie = await prisma.session.findMany({
-		where: { admin_id: matchingAdmin[0].id },
+		where: { admin_id: matchingAdmin.id },
 	});
 
 	if (checkCookie.length == 0) {
 		key = crypto.randomBytes(32).toString('hex');
 		await prisma.session.create({
-			data: { key: key, admin_id: matchingAdmin[0].id },
+			data: { key: key, admin_id: matchingAdmin.id },
 		});
 	} else {
 		key = checkCookie[0].key;
 	}
 
-	res.cookie('adminKey', key, { httpOnly: true, sameSite: true });
-	res.redirect(`http://${webserver_ip}:${webserver_port}/admin`);
+	res
+		.cookie('adminKey', key, { httpOnly: true, sameSite: true })
+		.redirect(`http://${webserver_ip}:${webserver_port}/admin`);
 });
 
 app.post('/newadmin', upload.none(), async (req, res) => {
@@ -253,11 +290,11 @@ app.post('/deleteadmin', upload.none(), async (req, res) => {
 		return res.status(401).send('Valid cookie not found');
 	}
 
-	const update: { adminId: number; warning: boolean } = req.body;
-
+	const update: { adminId: string; warning: boolean } = req.body;
+	const parsedId = parseInt(update.adminId);
 	update.warning = !!update.warning;
 
-	await prisma.admin.delete({ where: { id: update.adminId } });
+	await prisma.admin.delete({ where: { id: parsedId } });
 
 	res.redirect(`http://${webserver_ip}:${webserver_port}/admin/editor`);
 });

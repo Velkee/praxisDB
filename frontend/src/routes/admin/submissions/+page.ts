@@ -4,9 +4,10 @@ const api_ip = PUBLIC_API_IP;
 const api_port = PUBLIC_API_PORT;
 
 export const load: PageLoad = async ({ fetch }) => {
-	const response = await fetch(`http://${api_ip}:${api_port}/submissions`);
+	const get = await fetch(`http://${api_ip}:${api_port}/submissions`);
 
 	const data: {
+		id: number;
 		company_id: number;
 		timestamp: string;
 		responded: boolean;
@@ -18,7 +19,7 @@ export const load: PageLoad = async ({ fetch }) => {
 			subjects: { name: string }[];
 		};
 		admin: { name: string } | null;
-	}[] = await response.json();
+	}[] = await get.json();
 
 	return { data };
 };

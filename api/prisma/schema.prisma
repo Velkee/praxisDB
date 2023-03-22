@@ -9,7 +9,7 @@ datasource db {
 
 model admin {
   id           Int       @id @default(autoincrement())
-  username     String
+  username     String    @unique
   passwordhash String
   checked      checked[]
   session      session[]
@@ -36,7 +36,7 @@ model company {
 
 model session {
   id       Int    @id @default(autoincrement())
-  key      String
+  key      String @unique
   admin_id Int
   admin    admin  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
 }
