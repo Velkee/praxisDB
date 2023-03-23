@@ -80,6 +80,7 @@ app.get('/subjects', async (_req, res) => {
 
 app.get('/admins', async (_req, res) => {
 	const fetchAdmins = await prisma.admin.findMany({
+		orderBy: { username: 'asc' },
 		select: { id: true, username: true },
 	});
 
@@ -117,7 +118,7 @@ app.get('/submissions', async (_req, res) => {
 app.get('/submissions/:submission', async (req, res) => {
 	const submissionId = parseInt(req.params.submission);
 
-	const fetchSubmission = await prisma.checked.findFirst({
+	const fetchSubmission = await prisma.checked.findUnique({
 		where: { id: submissionId },
 		include: {
 			company: { select: { name: true, subjects: { select: { name: true } } } },
@@ -144,11 +145,11 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 		return res.status(400).send('Please upload a valid image');
 	}
 
-	let companyCheck = await prisma.company.findMany({
+	let companyCheck = await prisma.company.findUnique({
 		where: { id: parseInt(submission.buissenessNr) },
 	});
 
-	if (companyCheck.length == 0) {
+	if (companyCheck == null) {
 		await prisma.company.create({
 			data: {
 				id: parseInt(submission.buissenessNr),
@@ -156,17 +157,17 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 			},
 		});
 
-		companyCheck = await prisma.company.findMany({
+		companyCheck = await prisma.company.findUnique({
 			where: { id: parseInt(submission.buissenessNr) },
 		});
 	}
 
-	const checkLink = await prisma.company.findMany({
+	const checkLink = await prisma.company.findFirst({
 		where: { subjects: { some: { id: parseInt(submission.subject) } } },
 		select: { _count: true },
 	});
 
-	if (checkLink.length == 0) {
+	if (checkLink == null) {
 		await prisma.company.update({
 			where: { id: parseInt(submission.buissenessNr) },
 			data: { subjects: { connect: { id: parseInt(submission.subject) } } },
@@ -219,17 +220,17 @@ app.post('/admin/login', upload.none(), async (req, res) => {
 
 	let key: string;
 
-	const checkCookie = await prisma.session.findMany({
+	const checkCookie = await prisma.session.findFirst({
 		where: { admin_id: matchingAdmin.id },
 	});
 
-	if (checkCookie.length == 0) {
+	if (checkCookie == null) {
 		key = crypto.randomBytes(32).toString('hex');
 		await prisma.session.create({
 			data: { key: key, admin_id: matchingAdmin.id },
 		});
 	} else {
-		key = checkCookie[0].key;
+		key = checkCookie.key;
 	}
 
 	res
@@ -242,14 +243,22 @@ app.post('/newadmin', upload.none(), async (req, res) => {
 		return res.status(401).send('Valid cookie not found');
 	}
 
-	const info: { adminUsername: string; adminPassword: string } = req.body;
+	const info: { adminUsername?: string; adminPassword?: string } = req.body;
 	const saltRounds = 10;
 
-	const query = await prisma.admin.findMany({
+	if (info.adminUsername === undefined || info.adminPassword === undefined) {
+		return res
+			.status(400)
+			.send(
+				'Username or password not provided. If you are seeing this you broke something'
+			);
+	}
+
+	const query = await prisma.admin.findUnique({
 		where: { username: info.adminUsername },
 	});
 
-	if (query.length != 0) {
+	if (query != null) {
 		return res.status(409).send('User with that username already exists');
 	}
 
@@ -267,17 +276,30 @@ app.post('/editadmin', upload.none(), async (req, res) => {
 		return res.status(401).send('Valid cookie not found');
 	}
 
-	const update: { oldPassword: string; newPassword: string } = req.body;
+	const update: { oldPassword?: string; newPassword?: string } = req.body;
 	const saltRounds = 10;
 
+	if (update.oldPassword === undefined || update.newPassword === undefined) {
+		return res
+			.status(400)
+			.send(
+				'One of the fields are missing. If you are reading this, please stop'
+			);
+	}
+
 	const hash = await bcrypt.hash(update.newPassword, saltRounds);
-	const idFromSession = await prisma.session.findMany({
+
+	const idFromSession = await prisma.session.findUnique({
 		where: { key: req.cookies.adminKey },
 		select: { admin_id: true },
 	});
 
+	if (idFromSession == null) {
+		return res.status(500).send('The admin_id could not be determined');
+	}
+
 	await prisma.admin.update({
-		where: { id: idFromSession[0].admin_id },
+		where: { id: idFromSession.admin_id },
 		data: { passwordhash: hash },
 	});
 
