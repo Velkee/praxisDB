@@ -138,12 +138,14 @@ app.get('/submissions/:submission', async (req, res) => {
 
 app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 	const submission: {
-		buissenessName: string;
-		buissenessNr: string;
+		companyName: string;
+		companyId: string;
 		subject: string;
 		responded?: boolean;
 		accepted?: boolean;
 	} = req.body;
+
+	console.log(req.body);
 
 	submission.responded = !!submission.responded;
 	submission.accepted = !!submission.accepted;
@@ -153,19 +155,19 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 	}
 
 	let companyCheck = await prisma.company.findUnique({
-		where: { id: parseInt(submission.buissenessNr) },
+		where: { id: parseInt(submission.companyId) },
 	});
 
 	if (companyCheck == null) {
 		await prisma.company.create({
 			data: {
-				id: parseInt(submission.buissenessNr),
-				name: submission.buissenessName,
+				id: parseInt(submission.companyId),
+				name: submission.companyName,
 			},
 		});
 
 		companyCheck = await prisma.company.findUnique({
-			where: { id: parseInt(submission.buissenessNr) },
+			where: { id: parseInt(submission.companyId) },
 		});
 	}
 
@@ -176,14 +178,14 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 
 	if (checkLink == null) {
 		await prisma.company.update({
-			where: { id: parseInt(submission.buissenessNr) },
+			where: { id: parseInt(submission.companyId) },
 			data: { subjects: { connect: { id: parseInt(submission.subject) } } },
 		});
 	}
 
 	await prisma.checked.create({
 		data: {
-			company: { connect: { id: parseInt(submission.buissenessNr) } },
+			company: { connect: { id: parseInt(submission.companyId) } },
 			responded: submission.responded,
 			accepted: submission.accepted,
 			proof: uniqueSuffix,

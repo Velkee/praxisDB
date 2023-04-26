@@ -7,15 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model admin {
+model Admin {
   id           Int       @id @default(autoincrement())
   username     String    @unique
   passwordhash String
-  checked      checked[]
-  session      session[]
+  checked      Checked[]
+  session      Session[]
 }
 
-model checked {
+model Checked {
   id         Int      @id(map: "check_pkey") @default(autoincrement())
   company_id Int      @unique
   date       DateTime @db.Date
@@ -23,27 +23,27 @@ model checked {
   accepted   Boolean
   admin_id   Int?
   proof      String   @unique
-  admin      admin?   @relation(fields: [admin_id], references: [id])
-  company    company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
+  admin      Admin?   @relation(fields: [admin_id], references: [id])
+  company    Company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
 }
 
-model company {
+model Company {
   id       Int       @id
   name     String
-  checked  checked[]
-  subjects subject[] @relation("companyTosubject")
+  checked  Checked[]
+  subjects Subject[] @relation("companyTosubject")
 }
 
-model session {
+model Session {
   id       Int      @id @default(autoincrement())
   key      String   @unique
   admin_id Int      @unique
   expires  DateTime @db.Date
-  admin    admin    @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  admin    Admin    @relation(fields: [admin_id], references: [id], onDelete: Cascade)
 }
 
-model subject {
+model Subject {
   id        Int       @id @default(autoincrement())
   name      String    @unique
-  companies company[] @relation("companyTosubject")
+  companies Company[] @relation("companyTosubject")
 }

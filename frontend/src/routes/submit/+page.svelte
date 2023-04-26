@@ -4,6 +4,43 @@
 	const api_port = PUBLIC_API_PORT;
 	import type { PageData } from './$types';
 	export let data: PageData;
+
+	interface Unit {
+		navn: string;
+		organisasjonsnummer: string;
+	}
+
+	interface UnitData {
+		_embedded: {
+			enheter: Unit[];
+		};
+	}
+
+	let searchText: string;
+	let companyId: string;
+	let timeout: number | undefined;
+	let unitList: Unit[] = [];
+	let selectedUnit: Unit | null = null;
+
+	async function search() {
+		const response = await fetch(
+			`https://data.brreg.no/enhetsregisteret/api/enheter?navn=${searchText}`
+		);
+		const data: UnitData = await response.json();
+		unitList = data?._embedded?.enheter || [];
+		selectedUnit = unitList[0] || null;
+		console.log(unitList);
+	}
+
+	function handleInput() {
+		clearTimeout(timeout);
+		timeout = setTimeout(search, 2000);
+	}
+
+	function handleSelectionChange() {
+		searchText = selectedUnit?.navn || '';
+		companyId = selectedUnit?.organisasjonsnummer || '';
+	}
 </script>
 
 <header>
@@ -17,27 +54,40 @@
 		method="post"
 		enctype="multipart/form-data"
 	>
-		<label for="buissenessName"
-			>Buisseness name (check <a
+		<label for="companyName"
+			>Company name (searches <a
 				href="https://www.brreg.no"
 				target="_blank"
 				rel="noreferrer">brreg.no</a
 			>):</label
 		>
 		<br />
-		<input type="text" name="buissenessName" id="buissenessName" required />
+		<input
+			type="text"
+			name="companyName"
+			id="companyName"
+			bind:value={searchText}
+			on:input={handleInput}
+			on:change={handleSelectionChange}
+			required
+		/>
 		<br />
 
-		<label for="buissenessNr"
-			>Buisseness' organisation number (check <a
-				href="https://www.brreg.no"
-				target="_blank"
-				rel="noreferrer">brreg.no</a
-			>):</label
-		>
+		<select bind:value={selectedUnit} on:change={handleSelectionChange}>
+			{#each unitList as unit}
+				<option value={unit}>{unit.navn}</option>
+			{/each}
+		</select>
 		<br />
-		<input type="number" name="buissenessNr" id="buissenessNr" required />
-		<br />
+
+		<input
+			type="text"
+			bind:value={companyId}
+			name="companyId"
+			id="companyId"
+			hidden
+			required
+		/>
 
 		<label for="subject">Which education programme are you taking?</label>
 		<br />
@@ -59,7 +109,8 @@
 		<br />
 
 		<label for="imageUpload"
-			>Please upload an image so we can verify the request:</label
+			>Please upload an screenshot so we can verify the validity of the
+			submission:</label
 		>
 		<br />
 		<input
