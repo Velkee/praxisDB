@@ -11,7 +11,7 @@ export const load: PageLoad = async ({ fetch, params }) => {
 	const check: {
 		id: number;
 		company_id: number;
-		timestamp: string;
+		date: string;
 		responded: boolean;
 		accepted: boolean;
 		admin_id: number | null;
@@ -24,7 +24,7 @@ export const load: PageLoad = async ({ fetch, params }) => {
 
 	const admins: {
 		id: number;
-		name: string;
+		username: string;
 	}[] = await getAdmins.json();
 
 	return { check, admins };

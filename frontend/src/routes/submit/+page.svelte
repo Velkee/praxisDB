@@ -18,7 +18,10 @@
 		enctype="multipart/form-data"
 	>
 		<label for="buissenessName"
-			>Buisseness name (check <a href="https://www.brreg.no">brreg.no</a
+			>Buisseness name (check <a
+				href="https://www.brreg.no"
+				target="_blank"
+				rel="noreferrer">brreg.no</a
 			>):</label
 		>
 		<br />
@@ -26,8 +29,10 @@
 		<br />
 
 		<label for="buissenessNr"
-			>Buisseness' organisation number (check <a href="https://www.brreg.no"
-				>brreg.no</a
+			>Buisseness' organisation number (check <a
+				href="https://www.brreg.no"
+				target="_blank"
+				rel="noreferrer">brreg.no</a
 			>):</label
 		>
 		<br />

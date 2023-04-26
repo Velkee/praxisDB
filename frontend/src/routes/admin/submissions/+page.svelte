@@ -14,7 +14,7 @@
 			<div>
 				<p>Company name: {check.company.name}</p>
 				<p>Company number: {check.company_id}</p>
-				<p>Last checked: {check.timestamp.slice(0, 10)}</p>
+				<p>Last checked: {check.date.slice(0, 10)}</p>
 				<p>
 					Did the company respond?
 					{#if check.responded === true}

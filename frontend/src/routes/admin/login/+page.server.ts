@@ -11,3 +11,5 @@ export const load: PageServerLoad = async ({ fetch }) => {
 		throw redirect(303, '/admin');
 	}
 };
+
+export const prerender = false;

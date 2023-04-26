@@ -4,6 +4,7 @@
 	export let data: PageData;
 	const api_ip = PUBLIC_API_IP;
 	const api_port = PUBLIC_API_PORT;
+	console.log(data);
 </script>
 
 <header>
@@ -12,13 +13,13 @@
 </header>
 
 <main class="main-content">
-	<form>
+	<form action="http://{api_ip}:{api_port}/" method="post">
 		<p>Company name: {data.check.company.name}</p>
 		<input type="text" name="companyName" id="companyName" />
 		<p>Company number: {data.check.company_id}</p>
 		<input type="text" name="companyId" id="companyId" />
-		<p>Last checked: {data.check.timestamp.slice(0, 10)}</p>
-		<input type="datetime-local" name="timestamp" id="timestamp" />
+		<p>Last checked: {data.check.date.slice(0, 10)}</p>
+		<input type="date" name="date" id="date" />
 		<p>
 			Did the company respond?
 			{#if data.check.responded === true}
@@ -47,7 +48,7 @@
 		</p>
 		<select name="admin" id="admin">
 			{#each data.admins as admin}
-				<option value={admin.id}>{admin.name}</option>
+				<option value={admin.id}>{admin.username}</option>
 			{/each}
 		</select>
 	</form>

@@ -7,8 +7,9 @@ export const load: PageLoad = async ({ fetch }) => {
 	const response = await fetch(`http://${api_ip}:${api_port}/submissions`);
 
 	const data: {
+		id: number;
 		company_id: number;
-		timestamp: string;
+		date: string;
 		responded: boolean;
 		accepted: boolean;
 		admin_id: number | null;
