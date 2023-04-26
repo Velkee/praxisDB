@@ -17,12 +17,12 @@ model admin {
 
 model checked {
   id         Int      @id(map: "check_pkey") @default(autoincrement())
-  company_id Int
-  timestamp  DateTime @db.Timestamptz(6)
+  company_id Int      @unique
+  date       DateTime @db.Date
   responded  Boolean
   accepted   Boolean
   admin_id   Int?
-  proof      String
+  proof      String   @unique
   admin      admin?   @relation(fields: [admin_id], references: [id])
   company    company  @relation(fields: [company_id], references: [id], onDelete: Cascade)
 }
@@ -35,14 +35,15 @@ model company {
 }
 
 model session {
-  id       Int    @id @default(autoincrement())
-  key      String @unique
-  admin_id Int
-  admin    admin  @relation(fields: [admin_id], references: [id], onDelete: Cascade)
+  id       Int      @id @default(autoincrement())
+  key      String   @unique
+  admin_id Int      @unique
+  expires  DateTime @db.Date
+  admin    admin    @relation(fields: [admin_id], references: [id], onDelete: Cascade)
 }
 
 model subject {
   id        Int       @id @default(autoincrement())
-  name      String
+  name      String    @unique
   companies company[] @relation("companyTosubject")
 }

@@ -48,6 +48,13 @@ async function validateCookie(key?: string): Promise<number | undefined> {
 	return admin?.id;
 }
 
+async function checkExpired() {
+	const currentDate = new Date();
+	await prisma.session.deleteMany({ where: { expires: currentDate } });
+}
+
+checkExpired();
+
 // Sets up multer's storage location
 
 let uniqueSuffix: string;
@@ -180,7 +187,7 @@ app.post('/submit', upload.single('imageUpload'), async (req, res) => {
 			responded: submission.responded,
 			accepted: submission.accepted,
 			proof: uniqueSuffix,
-			timestamp: new Date(),
+			date: new Date(),
 		},
 	});
 
@@ -220,17 +227,24 @@ app.post('/admin/login', upload.none(), async (req, res) => {
 
 	let key: string;
 
-	const checkCookie = await prisma.session.findFirst({
+	const session = await prisma.session.findUnique({
 		where: { admin_id: matchingAdmin.id },
 	});
 
-	if (checkCookie == null) {
+	if (session == null) {
 		key = crypto.randomBytes(32).toString('hex');
+		const expiryDate = new Date();
+		expiryDate.setDate(expiryDate.getDate() + 30);
+
 		await prisma.session.create({
-			data: { key: key, admin_id: matchingAdmin.id },
+			data: {
+				key: key,
+				expires: expiryDate,
+				admin_id: matchingAdmin.id,
+			},
 		});
 	} else {
-		key = checkCookie.key;
+		key = session.key;
 	}
 
 	res
@@ -329,3 +343,7 @@ app.get('/logout', upload.none(), (_req, res) => {
 app.listen(api_port, () => {
 	console.log(`API running on port ${api_port}`);
 });
+
+setInterval(async () => {
+	await checkExpired();
+}, 43200000);
